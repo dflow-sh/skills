@@ -35,6 +35,7 @@ Application → Environment (one compute target) → Service (app, database, or 
 5. `update_service` with the source, builder, volumes, and variables.
 6. `create_deployment` with the service id. This starts a job. Poll `get_deployments_by_service_id` until it finishes. `no-cache` pulls the latest image. `cache` rebuilds the existing image.
 7. Build and deploy logs are on the deployment. After the service is up, runtime output is `get_service_runtime_logs`.
+8. `set_default_environment` when the user wants that environment to be the application default. `update_application` and `update_environment` change name or description only, not status.
 
 Volumes should use host path `/var/lib/dokku/data/storage/{service-name}/{folder-name}`. For a non-root image that writes to a volume, set `DFLOW_USER_ID` and `DFLOW_GROUP_ID` (often `1000`) on the service. Skip that when the process runs as root.
 

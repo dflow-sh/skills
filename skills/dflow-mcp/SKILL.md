@@ -45,8 +45,9 @@ Install the skill pack with `npx skills add dflow-sh/skills`.
 
 Application → Environment (one worker node) → Service (app, database, or Docker) → Deployment
 
-- `list_applications` / `get_application_by_id`
-- `list_environments` / `get_environment_by_id`
+- `list_applications` / `get_application_by_id` / `update_application` (name or description only)
+- `list_environments` / `get_environment_by_id` / `update_environment` (name or default flag only)
+- `set_default_environment` to pin the application default
 - `list_services` / `get_service_by_id` (id or case-insensitive name)
 - `list_worker_nodes` / `get_worker_node_by_id`
 
@@ -75,7 +76,7 @@ Deploy diagnosis: `get_service_by_id` → `get_deployments_by_service_id` → `g
 Call the status tool first. Do not pass report strings into the set tools.
 
 - `get_service_scale_status`, then `scale_service`. `presetKey` (`small` 1, `medium` 2, `large` 3) scales the web process only. `processScales` keys are `web`, `worker`, and `scheduler`. This does not set CPU or memory.
-- `get_service_resource_status`, then `set_service_resource_limits` or `set_service_resource_reserves`. CPU is cores (0.5–2). Memory is MiB (512–4096). Limit presets: `small` 0.5/512, `medium` 0.5/1024, `large` 1/2048. Reserves have no presets and need a process type. Clearing limits or reserves needs `processType`: `web`, `worker`, `scheduler`, or `_default_`. Resource changes need a deploy.
+- `get_service_resource_status`, then `set_service_resource_limits` or `set_service_resource_reserves`. CPU is cores (0.5–2). Memory is MiB (512–4096). Limit presets: `small` 0.5/512, `medium` 0.5/1024, `large` 1/2048. Reserves have no presets and need a process type. `clear_service_resource_limits` and `clear_service_resource_reserves` need `processType`: `web`, `worker`, `scheduler`, or `_default_`. Resource changes need a deploy.
 
 ## Database backups
 
@@ -83,7 +84,7 @@ Self-managed compute only. ClickHouse is unsupported. Destination is saved on th
 
 1. `list_backup_storage_providers` (credentials are redacted).
 2. `update_service_backup_destination` with `internal`, or `external` plus a verified provider id.
-3. `create_backup` with the service id. Poll `list_service_backups` until success or failed.
+3. `create_backup` with the service id. Poll `list_service_backups` until success or failed. `list_backups` lists snapshots for the whole organisation.
 4. `update_backup_schedule` for hourly, daily, weekly, or monthly. It does not change the destination.
 
 Confirm before `restore_backup` or `delete_backup`. Restore overwrites the live database. Delete destroys the dump.
