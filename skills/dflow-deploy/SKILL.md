@@ -67,7 +67,7 @@ Examples:
 - `APP_URL={{ my-api.DFLOW_PUBLIC_DOMAIN }}`
 - `PAYLOAD_SECRET={{ secret(64, "abcdefghijklMNOPQRSTUVWXYZ") }}`
 
-Database keys (prefix by type): `POSTGRES_*`, `MONGO_*`, `MYSQL_*`, `MARIA_*`, `REDIS_*` — e.g. `URI`, `USERNAME`, `PASSWORD`, `HOST`, `PORT`, `NAME`, plus `PUBLIC_*` after expose. Prefer the full `*_URI` when the app accepts it; use combo when it needs a custom string. Reads never return literal secret values; `{{ reference }}` templates may still appear.
+Database keys (prefix by type): `POSTGRES_*`, `MONGO_*`, `MYSQL_*`, `MARIADB_*`, `REDIS_*` — e.g. `URI`, `USERNAME`, `PASSWORD`, `HOST`, `PORT`, `NAME`, plus `PUBLIC_*` after expose. Prefer the full `*_URI` when the app accepts it; use combo when it needs a custom string. Reads never return literal secret values; `{{ reference }}` templates may still appear.
 
 ### System variables (volume ownership)
 
