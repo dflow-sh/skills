@@ -45,7 +45,66 @@ Volumes should use host path `/var/lib/dokku/data/storage/{service-name}/{folder
 - Docker: `create_docker_service`, then `update_service` with the image. Registry credentials go through the Docker registry tools, and a connection test runs before anything is saved.
 - Database: `create_database_service`. ClickHouse backups are unsupported.
 - Local archive: app services only, and only when there is no git remote. Do not send archive bytes through MCP.
-- Template: `deploy_template_to_application` creates the services and deploys them one by one. Check capacity first. Do not call `create_deployment` afterward.
+- Template: `deploy_template_to_application` creates the services and deploys them one by one in list order. Put **database** services first in the template `services` array (before apps/docker) so apps can reference `{{ db.POSTGRES_URI }}` after the DB exists. Check capacity first. Do not call `create_deployment` afterward.
+
+## Configure the service
+
+Use `update_service` for source, builder, commands, ports, volumes, and variables. Variable and volume changes need a redeploy or restart to take effect.
+
+### Variables
+
+Values can be:
+
+- **Literal** — static string (e.g. `NODE_ENV=production`)
+- **Reference** — `{{ service-name.VARIABLE_NAME }}` from another service in the same environment
+- **Combo** — mix literals with multiple `{{ … }}` refs (and optional `secret()`) in one value
+- **Secret helper** — `{{ secret(64, "aA1!") }}` (length + charset); resolved once and kept while the template string is unchanged (including inside a combo)
+
+Examples:
+
+- `DATABASE_URI={{ my-db.POSTGRES_URI }}`
+- `DATABASE_URL=postgres://{{ my-db.POSTGRES_USERNAME }}:{{ my-db.POSTGRES_PASSWORD }}@{{ my-db.POSTGRES_HOST }}:{{ my-db.POSTGRES_PORT }}/{{ my-db.POSTGRES_NAME }}`
+- `APP_URL={{ my-api.DFLOW_PUBLIC_DOMAIN }}`
+- `PAYLOAD_SECRET={{ secret(64, "abcdefghijklMNOPQRSTUVWXYZ") }}`
+
+Database keys (prefix by type): `POSTGRES_*`, `MONGO_*`, `MYSQL_*`, `MARIA_*`, `REDIS_*` — e.g. `URI`, `USERNAME`, `PASSWORD`, `HOST`, `PORT`, `NAME`, plus `PUBLIC_*` after expose. Prefer the full `*_URI` when the app accepts it; use combo when it needs a custom string. Reads never return literal secret values; `{{ reference }}` templates may still appear.
+
+### System variables (volume ownership)
+
+For non-root images that write to bind mounts (often UID `1000`, e.g. Directus or PocketBase):
+
+| Variable | Purpose |
+| --- | --- |
+| `DFLOW_USER_ID` | Numeric UID for `chown` on volume host paths |
+| `DFLOW_GROUP_ID` | Numeric GID for `chown` on volume host paths |
+
+Both optional. Integers `0`–`2147483647`. If only one is set, that value is used for both uid and gid. Skip when the process runs as root. Prefer host path `/var/lib/dokku/data/storage/{service-name}/{folder-name}`.
+
+### Commands
+
+On `update_service`: `startCommand`, `buildCommand`, `installCommand` (also `dockerfilePath`, `procfilePath`, `staticRoot`, `staticIndexFile` when the builder supports them). Support is builder-gated (e.g. Railpack allows install/build/start; Docker image services support a start override). If the API rejects a field, switch builder or put the command in the repo config instead.
+
+### Ports
+
+- **App (git):** set the listen port on the git settings (e.g. `githubSettings.port`).
+- **App (file archive):** `fileSourceSettings.port` (default often `3000`).
+- **Docker:** `dockerDetails.ports` as `{ hostPort, containerPort, scheme: http|https }[]`.
+
+Public traffic reaches the service hostname (`*.up.dflow.sh` or a custom domain), not the worker node's public IP on port 80.
+
+### Proxy / large uploads
+
+App and Docker services have a dashboard **Proxy** tab for nginx. Default `client-max-body-size` is `1m` — raise it for large uploads. Also `client-body-timeout` / `client-header-timeout` (default `60s`). MCP has no nginx get/set tools yet; tell the user to use the dashboard Proxy tab.
+
+### Database linking and expose
+
+"Attach a database" means create **and** wire:
+
+1. `create_database_service` in the same environment (after capacity check).
+2. `update_service` on the app with a variable like `DATABASE_URI={{ my-db.POSTGRES_URI }}` (match the DB type key above).
+3. `create_deployment` on the app (and the database if it still needs a first deploy).
+
+Do not leave a standalone DB with no app variable. Public connection vars (`POSTGRES_PUBLIC_URI`, etc.) stay off until the user exposes the database in the dashboard; MCP cannot expose/unexpose ports yet.
 
 ## Local archive
 
